@@ -3,19 +3,22 @@ import socket
 import struct
 import random
 import logging
+import thread
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-BUFFER_SIZE = 9948       
-class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
 
-    def do_home(self):
+BUFFER_SIZE = 9948   
+conn_pool = {}    
+TCP_IP = '127.0.0.1'
+
+
+class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_home(self, nr_placa):
         try:
             print('am intrat in do home')
-            #data = conn.recv(4)
-            #no_placa = struct.unpack("I", data)[0]
             
             TCP_PORT = random.randint(6667, 8887)
-            print ('the port is ' , TCP_PORT)
-
+            print ('the port is ' , TCP_PORT, 'and the numar placa is :', nr_placa)
+            command_socket = conn_pool[nr_placa]
             s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s1.bind((TCP_IP, TCP_PORT))
@@ -24,7 +27,7 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
             print ('i have sent the posrt from server')
 
             conn1, addr1 = s1.accept()
-            #send code 200 response
+
             self.send_response(200)
             #send header first
             self.send_header('Content-type','image/jpeg')
@@ -46,31 +49,33 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
     #handle GET command
     def do_GET(self):
         print('aaaaaaaaaa'+ self.path)
-        if self.path == '/image.jpg' :
-                self.do_home()
+        if self.path.endswith('/image.jpg') :
+                parts = self.path.split('/')
+                nr_placa = int(parts[1])
+                self.do_home(nr_placa)
         else :         
                 self.send_error(404, 'file not found: ' + self.path)
        
-def run():       
-    print('la inceput in server')
-    global TCP_IP
-    TCP_IP = '127.0.0.1'
+def initiate_board_conn():
     TCP_PORT = 6666
-    #BUFFER_SIZE = 20
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((TCP_IP, TCP_PORT))
     s.listen(1)
+    while True:    
+        command_socket, addr = s.accept()
+        data = command_socket.recv(BUFFER_SIZE)
+        nr_placa = struct.unpack("I", data)[0]
+        print ('tocmai am primit numarul placii care este: ' ,  nr_placa)
+        global conn_pool
+        conn_pool[nr_placa]= command_socket
 
-    global command_socket
-    command_socket, addr = s.accept()
-    data = command_socket.recv(BUFFER_SIZE)
-    nr_placa = struct.unpack("I", data)[0]
-    print ('tocmai am primit numarul placii care este: ' ,  nr_placa)
-        
 
-    server_address = ('127.0.0.1', 8888)
+def run():       
+    print('la inceput in server')
+    thread.start_new_thread( initiate_board_conn , () )
+    
+    server_address = ('0.0.0.0', 8888)
     httpd = HTTPServer(server_address, KodeFunHTTPRequestHandler)
     print('http server is running...')
     httpd.serve_forever()
