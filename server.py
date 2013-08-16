@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import socket
 import struct
@@ -9,25 +10,99 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 BUFFER_SIZE = 9948   
 conn_pool = {}    
 TCP_IP = '127.0.0.1'
-
+sock_stream = {}
 
 class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
-    def do_home(self, nr_placa):
+    
+    
+    def do_image_page(self, nr_placa):
+        try:
+            print('entered in meth do_image do_image_page')
+            
+            self.send_response(200)
+            #send header first
+            self.send_header('Content-type','text/html')
+            self.end_headers()
+            html = '''
+<html>
+<head>
+<title>
+DAISY CAM!
+</title>
+</head>
+<body>
+<h1>
+HELLO MY MIGNIONS!
+</h1>
+<img id = "caption" src = "/%d/image.jpg?">     
+<script>
+
+function updateImage()
+{
+
+    document.getElementById("caption").src = "/%d/image.jpg?" + new Date().getTime();
+    setTimeout(updateImage, 1000);
+
+
+}
+updateImage()
+
+
+
+</script>
+
+                  </body>
+                  </html>
+''' % (nr_placa, nr_placa) 
+            self.wfile.write(html)
+            
+           
+        except Exception as e:
+            logging.exception("EXCEPTION IN DO IMAGE PAGE!")
+            self.send_error(505, 'file not found: ' + str(e))
+
+        
+    
+    
+    
+    def do_home(self):
         try:
             print('am intrat in do home')
             
-            TCP_PORT = random.randint(6667, 8887)
-            print ('the port is ' , TCP_PORT, 'and the numar placa is :', nr_placa)
-            command_socket = conn_pool[nr_placa]
-            s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s1.bind((TCP_IP, TCP_PORT))
-            s1.listen(1)
-            command_socket.sendall(struct.pack("I", TCP_PORT))
-            print ('i have sent the posrt from server')
+            self.send_response(200)
+            #send header first
+            self.send_header('Content-type','text/html')
+            self.end_headers()
+            html = '''
+<html>
+<head>
+<title>
+ZUZULEEEEE!
+</title>
+</head>
+<body>
+<h1>
+HELLO MY MIGNIONS! OMG! NOOO ! HELP ME! I'm trapped!
+MICU RULZ!
+</h1>'''
+            for nr_placa in conn_pool.keys():
+                html+='<a href = "/%d/image"> placa %d </a> <br>' % (nr_placa, nr_placa)
+            html += '''
 
-            conn1, addr1 = s1.accept()
+                  </body>
+                  </html>
+'''
+            self.wfile.write(html)
+            
+           
+        except Exception as e:
+            logging.exception("GOT AN E!")
+            self.send_error(505, 'file not found: ' + str(e))
 
+    def do_image(self, nr_placa):
+        try:
+            print('am intrat in do image')    
+            conn1 = self.get_listen_socket(nr_placa)
             self.send_response(200)
             #send header first
             self.send_header('Content-type','image/jpeg')
@@ -38,24 +113,51 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
                 if not data1: break
                 #send file content to client
                 self.wfile.write(data1)
-                break
+                
             
 
         except Exception as e:
-            logging.exception("I HATE AVWEONE!")
+            logging.exception("GOT AN EXCEPTION IN DO IMAGE!")
             self.send_error(505, 'file not found: ' + str(e))
-
+     
+    def server_bind(self):
+        HTTPServer.server_bind(self)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+     
+    def get_listen_socket(self, nr_placa):
+        TCP_PORT = random.randint(6667, 8887)
+        print ('the port is ' , TCP_PORT, 'the nr board is :', nr_placa)
+        command_socket = conn_pool[nr_placa]
+        
+        s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s1.settimeout(3)
+        s1.bind((TCP_IP, TCP_PORT))
+        s1.listen(1)
+        command_socket.sendall(struct.pack("I", TCP_PORT))
+        print ('i have sent the port from server')
+        conn1, addr1 = s1.accept()
+        return conn1
+     
          
     #handle GET command
     def do_GET(self):
-        print('aaaaaaaaaa'+ self.path)
-        if self.path.endswith('/image.jpg') :
+        print('the path from get is: '+ self.path)
+        if self.path == '/':
+                self.do_home()
+        elif '/image.jpg' in self.path:
                 parts = self.path.split('/')
                 nr_placa = int(parts[1])
-                self.do_home(nr_placa)
+                self.do_image(nr_placa)
+        elif '/image' in self.path:
+                parts = self.path.split('/')
+                nr_placa = int(parts[1])
+                self.do_image_page(nr_placa)
+    
         else :         
                 self.send_error(404, 'file not found: ' + self.path)
-       
+
+
 def initiate_board_conn():
     TCP_PORT = 6666
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -66,18 +168,20 @@ def initiate_board_conn():
         command_socket, addr = s.accept()
         data = command_socket.recv(BUFFER_SIZE)
         nr_placa = struct.unpack("I", data)[0]
-        print ('tocmai am primit numarul placii care este: ' ,  nr_placa)
+        print ('just got the id of the board that is: ' ,  nr_placa)
         global conn_pool
         conn_pool[nr_placa]= command_socket
 
 
 def run():       
-    print('la inceput in server')
+    print('at the beginning of the server side: ')
     thread.start_new_thread( initiate_board_conn , () )
     
-    server_address = ('0.0.0.0', 8888)
+    server_address = ('0.0.0.0', 8989)
     httpd = HTTPServer(server_address, KodeFunHTTPRequestHandler)
     print('http server is running...')
+    httpd.allow_reuse_address = True
+
     httpd.serve_forever()
     
 if __name__ == '__main__':
