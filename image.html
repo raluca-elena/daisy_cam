@@ -1,0 +1,31 @@
+
+<html>
+<head>
+<title>
+DAISY CAM!
+</title>
+</head>
+<body>
+<h1>
+HELLO MY MIGNIONS!
+</h1>
+<img id = "caption" src = "/%d/image.jpg?">     
+<script>
+
+function updateImage()
+{
+
+    document.getElementById("caption").src = "/%d/image.jpg?" + new Date().getTime();
+    setTimeout(updateImage, 1000);
+
+
+}
+updateImage()
+
+
+
+</script>
+
+                  </body>
+                  </html>
+

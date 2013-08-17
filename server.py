@@ -24,37 +24,8 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
             #send header first
             self.send_header('Content-type','text/html')
             self.end_headers()
-            html = '''
-<html>
-<head>
-<title>
-DAISY CAM!
-</title>
-</head>
-<body>
-<h1>
-HELLO MY MIGNIONS!
-</h1>
-<img id = "caption" src = "/%d/image.jpg?">     
-<script>
-
-function updateImage()
-{
-
-    document.getElementById("caption").src = "/%d/image.jpg?" + new Date().getTime();
-    setTimeout(updateImage, 1000);
-
-
-}
-updateImage()
-
-
-
-</script>
-
-                  </body>
-                  </html>
-''' % (nr_placa, nr_placa) 
+            html_file = open('/home/maat/daisy_cam/image.html', 'rd')
+            html = html_file.read() % (nr_placa, nr_placa) 
             self.wfile.write(html)
             
            
@@ -63,9 +34,6 @@ updateImage()
             self.send_error(505, 'file not found: ' + str(e))
 
         
-    
-    
-    
     def do_home(self):
         try:
             print('am intrat in do home')
@@ -74,25 +42,11 @@ updateImage()
             #send header first
             self.send_header('Content-type','text/html')
             self.end_headers()
-            html = '''
-<html>
-<head>
-<title>
-ZUZULEEEEE!
-</title>
-</head>
-<body>
-<h1>
-HELLO MY MIGNIONS! OMG! NOOO ! HELP ME! I'm trapped!
-MICU RULZ!
-</h1>'''
+            html_file = open('/home/maat/daisy_cam/home.html', 'rd')
+            lista_placi = ""
             for nr_placa in conn_pool.keys():
-                html+='<a href = "/%d/image"> placa %d </a> <br>' % (nr_placa, nr_placa)
-            html += '''
-
-                  </body>
-                  </html>
-'''
+                lista_placi+='<a href = "/%d/image"> placa %d </a> <br>' % (nr_placa, nr_placa)
+            html = html_file.read() % lista_placi
             self.wfile.write(html)
             
            
@@ -115,8 +69,6 @@ MICU RULZ!
                 #send file content to client
                 self.wfile.write(data1)
                 
-            
-
         except Exception as e:
             logging.exception("GOT AN EXCEPTION IN DO IMAGE!")
             self.send_error(505, 'file not found: ' + str(e))
@@ -124,6 +76,24 @@ MICU RULZ!
     def server_bind(self):
         HTTPServer.server_bind(self)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+        
+        
+        #handle GET command
+    def do_GET(self):
+        print('the path from get is: '+ self.path)
+        if self.path == '/':
+                self.do_home()
+        elif '/image.jpg' in self.path:
+                parts = self.path.split('/')
+                nr_placa = int(parts[1])
+                self.do_image(nr_placa)
+        elif '/image' in self.path:
+                parts = self.path.split('/')
+                nr_placa = int(parts[1])
+                self.do_image_page(nr_placa)
+    
+        else :         
+                self.send_error(404, 'file not found: ' + self.path)
      
     def get_listen_socket(self, nr_placa):
         TCP_PORT = random.randint(6667, 8887)
@@ -140,22 +110,7 @@ MICU RULZ!
         conn1, addr1 = s1.accept()
         return conn1
                  
-    #handle GET command
-    def do_GET(self):
-        print('the path from get is: '+ self.path)
-        if self.path == '/':
-                self.do_home()
-        elif '/image.jpg' in self.path:
-                parts = self.path.split('/')
-                nr_placa = int(parts[1])
-                self.do_image(nr_placa)
-        elif '/image' in self.path:
-                parts = self.path.split('/')
-                nr_placa = int(parts[1])
-                self.do_image_page(nr_placa)
     
-        else :         
-                self.send_error(404, 'file not found: ' + self.path)
 
 def set_keepalive(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     """Set TCP keepalive on an open socket.
@@ -169,18 +124,19 @@ def set_keepalive(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
           
+
 def verify_conn():
     print 'just entered in board verification!'
     global conn_pool
     print conn_pool
     while True:
         to_delete = []
-        for (k, v) in conn_pool.items():
+        for k, v in conn_pool.items():
             if  not is_alive(v):
                 to_delete.append(k)
         for k in to_delete:
             del conn_pool[k]
-        time.sleep(1)
+        time.sleep(5)
 
 def is_alive(sock):
     try:
