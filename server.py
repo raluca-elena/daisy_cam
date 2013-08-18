@@ -6,6 +6,7 @@ import random
 import logging
 import thread
 import time
+import base_conn_funct
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 BUFFER_SIZE = 9948   
@@ -13,8 +14,7 @@ conn_pool = {}
 TCP_IP = '127.0.0.1'
 sock_stream = {}
 
-class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
-    
+class HTTPRequestHandler(BaseHTTPRequestHandler):
     
     def do_image_page(self, nr_placa):
         try:
@@ -110,65 +110,12 @@ class KodeFunHTTPRequestHandler(BaseHTTPRequestHandler):
         conn1, addr1 = s1.accept()
         return conn1
                  
-    
-
-def set_keepalive(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
-    """Set TCP keepalive on an open socket.
-
-    It activates after 1 second (after_idle_sec) of idleness,
-    then sends a keepalive ping once every 3 seconds (interval_sec),
-    and closes the connection after 5 failed ping (max_fails), or 15 seconds
-    """
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
-          
-
-def verify_conn():
-    print 'just entered in board verification!'
-    global conn_pool
-    print conn_pool
-    while True:
-        to_delete = []
-        for k, v in conn_pool.items():
-            if  not is_alive(v):
-                to_delete.append(k)
-        for k in to_delete:
-            del conn_pool[k]
-        time.sleep(5)
-
-def is_alive(sock):
-    try:
-        response = sock.recv(1)
-    except socket.error:
-        return True
-    return False
-    
-def initiate_board_conn():
-    TCP_PORT = 6666
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    set_keepalive(s, after_idle_sec=1, interval_sec=3, max_fails=5)
-    s.bind((TCP_IP, TCP_PORT))
-    s.listen(1)
-    while True:    
-        command_socket, addr = s.accept()
-        set_keepalive(command_socket, after_idle_sec=1, interval_sec=3, max_fails=5)
-        data = command_socket.recv(BUFFER_SIZE)
-        nr_placa = struct.unpack("I", data)[0]
-        command_socket.setblocking(0)
-        print ('just got the id of the board that is: ' ,  nr_placa)
-        global conn_pool
-        conn_pool[nr_placa]= command_socket
-
-
 def run():       
     print('at the beginning of the server side: ')
-    thread.start_new_thread( initiate_board_conn , () )
-    thread.start_new_thread(verify_conn, ())
+    thread.start_new_thread( base_conn_funct.initiate_board_conn , (conn_pool, ) )
+    thread.start_new_thread(base_conn_funct.verify_conn, (conn_pool, ))
     server_address = ('0.0.0.0', 8989)
-    httpd = HTTPServer(server_address, KodeFunHTTPRequestHandler)
+    httpd = HTTPServer(server_address, HTTPRequestHandler)
     print('http server is running...')
     httpd.allow_reuse_address = True
 
