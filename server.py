@@ -5,14 +5,66 @@ import struct
 import random
 import logging
 import thread
+import threading
 import time
 import base_conn_funct
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 BUFFER_SIZE = 9948   
-conn_pool = {}    
+
 TCP_IP = '127.0.0.1'
 sock_stream = {}
+
+class TestLock:
+   def acquire(self):
+       print 'acquire'
+       return
+       
+   def release(self):
+       print 'release'
+       return
+       
+class TestDict(dict):
+    def copy(self):
+       return self
+       
+class ProtectedDictionary():
+   
+    def  __init__(self):
+        self.dict = {}
+        self.lock = threading.Lock()
+        #self.lock = TestLock()
+    
+    def __getitem__(self, key):
+        with self.lock:
+            retrieved_val = self.dict[key]
+        return retrieved_val
+
+    def __delitem__(self, key):
+        with self.lock:
+            del self.dict[key]
+        
+    def __setitem__(self, key, val):
+        with self.lock:
+            self.dict[key] = val
+
+    def copy(self):
+        with self.lock:
+            d = dict(self.dict)
+        return d
+        
+    def __repr__(self):
+        with self.lock:
+            r = repr(self.dict)
+        return r
+        
+    def __str__(self):
+        with self.lock:
+            s = str(self.dict)
+        return s
+
+conn_pool = ProtectedDictionary()    
+#conn_pool =  TestDict()   
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     
@@ -44,7 +96,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             html_file = open('/home/maat/daisy_cam/home.html', 'rd')
             lista_placi = ""
-            for nr_placa in conn_pool.keys():
+            for nr_placa in conn_pool.copy().keys():
                 lista_placi+='<a href = "/%d/image"> placa %d </a> <br>' % (nr_placa, nr_placa)
             html = html_file.read() % lista_placi
             self.wfile.write(html)
