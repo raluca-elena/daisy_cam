@@ -103,7 +103,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
             
            
         except Exception as e:
-            logging.exception("GOT AN E!")
+            logging.exception("GOT AN Exception!")
             self.send_error(505, 'file not found: ' + str(e))
 
     def do_image(self, nr_placa):
@@ -146,7 +146,17 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
     
         else :         
                 self.send_error(404, 'file not found: ' + self.path)
-     
+    
+    def do_POST(self):
+        content_len = self.headers.getheader('content-length')
+        print len(content_len)
+        post_body = self.rfile.read(content_len) 
+        print 'got a POST'
+        print post_body
+        
+        self.do_home()
+        
+        
     def get_listen_socket(self, nr_placa):
         TCP_PORT = random.randint(6667, 8887)
         print ('the port is ' , TCP_PORT, 'the nr board is :', nr_placa)

@@ -55,7 +55,10 @@ def initiate_board_conn(conn_pool):
         command_socket, addr = s.accept()
         set_keepalive(command_socket, after_idle_sec=1, interval_sec=3, max_fails=5)
         data = command_socket.recv(BUFFER_SIZE)
-        nr_placa = struct.unpack("I", data)[0]
+        #nr_placa = struct.unpack("l", data)[0]
+        a, b = struct.unpack('>QQ', data)
+        unpacked = (a << 64) | b
+        nr_placa = unpacked
         command_socket.setblocking(0)
         print ('just got the id of the board that is: ' ,  nr_placa)
         conn_pool[nr_placa]= command_socket

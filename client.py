@@ -6,8 +6,8 @@ import time
 import struct
 import urllib2
 import random
+import uuid
 TCP_IP = '127.0.0.1'
-#TCP_IP = 'daysi-cam-23675.euw1.actionbox.io'
 
 def set_keepalive(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     """Set TCP keepalive on an open socket.
@@ -24,16 +24,16 @@ def set_keepalive(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
 
 TCP_PORT = 6666
 BUFFER_SIZE = 40
-
-my_name = random.randint(2000, 3000)
-
+board_uuid = uuid.uuid4()
+max_int64 = 0xFFFFFFFFFFFFFFFF
+packed_board_uuid  = struct.pack('>QQ', (board_uuid.int >> 64) & max_int64, board_uuid.int & max_int64)
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TCP_IP, TCP_PORT))
 
-nr_bytes = s.send(struct.pack("I", my_name))
+nr_bytes = s.send(packed_board_uuid)
 set_keepalive(s, after_idle_sec=1, interval_sec=3, max_fails=5)
          
-print 'sending id_placa: ', nr_bytes
+print 'sending id_placa as %d bytes '% nr_bytes
 print('running client')
 while True:
         data = s.recv(BUFFER_SIZE)
