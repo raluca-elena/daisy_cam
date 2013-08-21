@@ -8,6 +8,7 @@ import thread
 import threading
 import time
 import base_conn_funct
+import db
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 BUFFER_SIZE = 9948   
@@ -143,6 +144,13 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 parts = self.path.split('/')
                 nr_placa = int(parts[1])
                 self.do_image_page(nr_placa)
+                
+        elif '/do_register_board' in self.path:
+               data = self.path[13:]
+               user = data.split('&')[0].split('=')[1]
+               uuid = data.split('&')[1].split('=')[1]
+               db.try_insert(user, uuid)
+               self.do_image_page(uuid)
     
         else :         
                 self.send_error(404, 'file not found: ' + self.path)

@@ -9,13 +9,13 @@ DAISY CAM!
 <h1>
 HELLO MY MIGNIONS!
 </h1>
-<img id = "caption" src = "/%d/image.jpg?">     
+<img id = "caption" src = "/%s/image.jpg?">     
 <script>
 
 function updateImage()
 {
 
-    document.getElementById("caption").src = "/%d/image.jpg?" + new Date().getTime();
+    document.getElementById("caption").src = "/%s/image.jpg?" + new Date().getTime();
     setTimeout(updateImage, 1000);
 
 
